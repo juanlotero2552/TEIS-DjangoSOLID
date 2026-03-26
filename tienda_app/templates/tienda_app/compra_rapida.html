@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compra Rápida</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .libro-info {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .precio {
+            font-size: 24px;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .mensaje {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .exito {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚   Compra Rápida</h1>
+        
+        <div class="libro-info">
+            <h2>{{ libro.titulo }}</h2>
+            <p>Precio base: ${{ libro.precio }}</p>
+            <p class="precio">Total con IVA: ${{ total }}</p>
+        </div>
+
+        <div style="margin: 20px 0;">
+            <label for="direccion">Dirección de envío:</label><br>
+            <input type="text" id="direccion" name="direccion" placeholder="Ingresa tu dirección" style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 4px; border: 1px solid #ddd;">
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit">
+                💳 Confirmar Compra
+            </button>
+        </form>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mensaje {% if message.tags %}{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <p style="margin-top: 20px; font-size: 12px; color: #666; text-align: center;">
+            *Arquitectura profesional con Service Layer y SOLID
+        </p>
+    </div>
+</body>
+</html>

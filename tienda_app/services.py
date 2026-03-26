@@ -1,47 +1,56 @@
-from django.shortcuts import get_object_or_404
-
+from .models import Libro, Inventario
+from .domain.calculadores import CalculadorImpuestos
 from .domain.builders import OrdenBuilder
-from .domain.logic import CalculadorImpuestos
-from .models import Inventario, Libro
+from django.contrib.auth.models import User
 
-
-class CompraService:
+class CompraRapidaService:
     """
-    SERVICE LAYER: Orquesta la interacción entre el dominio,
-    la infraestructura y la base de datos.
+    Servicio que maneja la lógica de negocio de compras rápidas
+    usando Factory Method y Builder
     """
-
     def __init__(self, procesador_pago):
         self.procesador_pago = procesador_pago
         self.builder = OrdenBuilder()
-
-    def obtener_detalle_producto(self, libro_id):
-        libro = get_object_or_404(Libro, id=libro_id)
+    
+    def procesar(self, libro_id, usuario, direccion=None):
+        """
+        Procesa la compra de un libro
+        Args:
+            libro_id: ID del libro a comprar
+            usuario: Objeto User de Django (no el ID)
+            direccion: Dirección de envío (opcional)
+        Returns:
+            tuple: (total_pagado, orden_id) o (None, None) si falla
+        """
+        # Obtener el libro y su inventario
+        libro = Libro.objects.get(id=libro_id)
+        inventario = Inventario.objects.get(libro=libro)
+        
+        # Validar que hay stock
+        if inventario.cantidad <= 0:
+            raise ValueError("❌ No hay existencias disponibles.")
+        
+        # Calcular total con IVA
         total = CalculadorImpuestos.obtener_total_con_iva(libro.precio)
-        return {"libro": libro, "total": total}
+        
+        # Procesar el pago
+        if self.procesador_pago.pagar(total):
+            # Actualizar inventario
+            inventario.cantidad -= 1
+            inventario.save()
+            
+            # Construir orden usando Builder Pattern
+            orden = (self.builder
+                    .con_usuario(usuario)  # usuario es objeto User
+                    .con_productos([libro])
+                    .para_envio(direccion or "Retiro en tienda")
+                    .build())
+            
+            return total, orden.id
+        
+        return None, None
 
-    def ejecutar_compra(self, libro_id, cantidad=1, direccion="", usuario=None):
-        libro = get_object_or_404(Libro, id=libro_id)
-        inv = get_object_or_404(Inventario, libro=libro)
 
-        if inv.cantidad < cantidad:
-            raise ValueError("No hay suficiente stock para completar la compra.")
-
-        orden = (
-            self.builder
-            .con_usuario(usuario)
-            .con_libro(libro)
-            .con_cantidad(cantidad)
-            .para_envio(direccion)
-            .build()
-        )
-
-        pago_exitoso = self.procesador_pago.pagar(orden.total)
-        if not pago_exitoso:
-            orden.delete()
-            raise Exception("La transacción fue rechazada por el banco.")
-
-        inv.cantidad -= cantidad
-        inv.save()
-
-        return orden.total
+# ✅ ALIAS PARA COMPATIBILIDAD CON CÓDIGO EXISTENTE
+# Esto permite que otras partes del código que importan "CompraService" sigan funcionando
+CompraService = CompraRapidaService
